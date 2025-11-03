@@ -222,6 +222,7 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
     if (extractedData.company_name && process.env.PERPLEXITY_API_KEY) {
       try {
         logger.info(`🌐 Arricchimento dati con Perplexity per: ${extractedData.company_name}`);
+        logger.info(`🔑 API Key Perplexity presente: ${process.env.PERPLEXITY_API_KEY ? 'SI' : 'NO'}`);
         const perplexityStart = Date.now();
 
         const perplexityService = new PerplexityService(process.env.PERPLEXITY_API_KEY);
@@ -261,7 +262,11 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
           ]
         );
       } catch (enrichError) {
-        logger.warn('⚠️ Errore arricchimento Perplexity:', enrichError.message);
+        logger.error('⚠️ Errore arricchimento Perplexity:', {
+          message: enrichError.message,
+          stack: enrichError.stack,
+          response: enrichError.response?.data
+        });
         logExtractionStep(siteId, 'perplexity_enrichment', 'failed', enrichError.message);
       }
     }
