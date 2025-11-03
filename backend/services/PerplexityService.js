@@ -8,7 +8,7 @@ class PerplexityService {
   constructor(apiKey) {
     this.apiKey = apiKey;
     this.apiUrl = 'https://api.perplexity.ai/chat/completions';
-    this.model = 'llama-3.1-sonar-large-128k-online'; // Modello con ricerca web
+    this.model = 'sonar-pro'; // Modello con ricerca web avanzata (2025)
   }
 
   /**
