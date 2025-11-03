@@ -31,7 +31,7 @@ const logger = winston.createLogger({
 
 // ========= MIDDLEWARE =========
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://21.0.0.188:5173'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://21.0.0.188:5173', 'https://construction-extractor.vercel.app'],
   credentials: true
 }));
 
