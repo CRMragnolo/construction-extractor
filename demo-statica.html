@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - Estrattore Info Cantieri</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white text-2xl">
+                    🏗️
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Estrattore Info Cantieri</h1>
+                    <p class="text-sm text-gray-500 mt-1">Carica foto di cartelli di cantiere e ottieni info automaticamente</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🔍</span>
+                    <div>
+                        <p class="text-sm font-medium text-blue-800">Totale Estratti</p>
+                        <p class="text-2xl font-bold text-blue-600">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">✅</span>
+                    <div>
+                        <p class="text-sm font-medium text-green-800">Completati</p>
+                        <p class="text-2xl font-bold text-green-600">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">❌</span>
+                    <div>
+                        <p class="text-sm font-medium text-red-800">Falliti</p>
+                        <p class="text-2xl font-bold text-red-600">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🌐</span>
+                    <div>
+                        <p class="text-sm font-medium text-purple-800">Arricchiti</p>
+                        <p class="text-2xl font-bold text-purple-600">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Area -->
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Carica Foto Cartello Cantiere</h2>
+                <p class="text-gray-600">Supporta JPG, PNG, WEBP, HEIC - Max 10MB</p>
+            </div>
+
+            <!-- Drag & Drop Zone -->
+            <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
+                <div class="text-6xl mb-4">📷</div>
+                <p class="text-lg font-medium text-gray-700 mb-2">Trascina qui la foto o clicca per selezionare</p>
+                <p class="text-sm text-gray-500">JPG, PNG, WEBP, HEIC - Max 10MB</p>
+                <input type="file" id="fileInput" accept="image/*" class="hidden">
+            </div>
+
+            <!-- Demo Success (nascosto all'inizio) -->
+            <div id="demoSuccess" class="hidden mt-8 bg-green-50 border-2 border-green-200 rounded-lg p-6">
+                <div class="text-center">
+                    <div class="text-4xl mb-4">✅</div>
+                    <h3 class="text-xl font-bold text-green-900 mb-4">Estrazione completata!</h3>
+                    <div class="text-left space-y-2 text-sm">
+                        <p><span class="font-semibold">🏢 Azienda:</span> Edilizia ABC Srl</p>
+                        <p><span class="font-semibold">📱 Telefono:</span> +39 02 1234567</p>
+                        <p><span class="font-semibold">🆔 P.IVA:</span> 12345678901</p>
+                        <p><span class="font-semibold">📍 Indirizzo:</span> Via Roma 123, Milano</p>
+                        <p><span class="font-semibold">⏱️ Tempo elaborazione:</span> 12.5s</p>
+                        <p><span class="font-semibold">🌐 Dati arricchiti:</span> ✅ Sì</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Come Funziona -->
+            <div class="mt-8 border-t pt-6">
+                <h3 class="text-lg font-semibold mb-3">Come funziona?</h3>
+                <ol class="list-decimal list-inside space-y-2 text-gray-700">
+                    <li>📸 <strong>Scatta o carica</strong> una foto del cartello di cantiere</li>
+                    <li>🤖 <strong>L'AI analizza</strong> l'immagine ed estrae: nome ditta, P.IVA, telefono, indirizzo</li>
+                    <li>🌐 <strong>Perplexity arricchisce</strong> i dati con info aggiuntive dall'azienda</li>
+                    <li>💾 <strong>Tutto viene salvato</strong> nel database per consultazioni future</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Demo Cards List -->
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Cantieri Estratti</h2>
+                <button class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+                    🔄 Ricarica
+                </button>
+            </div>
+
+            <!-- Empty State -->
+            <div class="text-center py-12 text-gray-500">
+                <div class="text-6xl mb-4">🏗️</div>
+                <p class="text-lg">Nessun cantiere estratto ancora</p>
+                <p class="text-sm mt-2">Carica la prima foto per iniziare!</p>
+            </div>
+        </div>
+
+        <!-- Footer Note -->
+        <div class="mt-8 text-center text-sm text-gray-500">
+            <p>⚠️ <strong>DEMO STATICA</strong> - Questa è solo l'interfaccia grafica</p>
+            <p>Per usare l'app completa con AI serve fare il deploy su Vercel + Render</p>
+        </div>
+    </main>
+
+    <script>
+        // Interattività base
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const demoSuccess = document.getElementById('demoSuccess');
+
+        dropzone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                // Simula upload
+                dropzone.innerHTML = '<div class="text-4xl mb-4">📤</div><p class="text-lg font-medium">Caricamento simulato...</p>';
+
+                setTimeout(() => {
+                    dropzone.classList.add('hidden');
+                    demoSuccess.classList.remove('hidden');
+                }, 2000);
+            }
+        });
+
+        // Drag & drop
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-blue-500', 'bg-blue-50');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('border-blue-500', 'bg-blue-50');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-blue-500', 'bg-blue-50');
+
+            if (e.dataTransfer.files.length > 0) {
+                dropzone.innerHTML = '<div class="text-4xl mb-4">📤</div><p class="text-lg font-medium">Caricamento simulato...</p>';
+
+                setTimeout(() => {
+                    dropzone.classList.add('hidden');
+                    demoSuccess.classList.remove('hidden');
+                }, 2000);
+            }
+        });
+    </script>
+</body>
+</html>
