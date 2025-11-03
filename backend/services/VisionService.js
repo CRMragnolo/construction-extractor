@@ -9,7 +9,7 @@ class VisionService {
   constructor(apiKey) {
     this.apiKey = apiKey;
     this.apiUrl = 'https://api.anthropic.com/v1/messages';
-    this.model = 'claude-3-5-sonnet-20240620'; // Modello con vision
+    this.model = 'claude-3-opus-20240229'; // Modello con vision (più accurato)
   }
 
   /**
