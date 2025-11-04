@@ -7,6 +7,7 @@ const sharp = require('sharp');
 const fs = require('fs').promises;
 const path = require('path');
 const winston = require('winston');
+const ExifService = require('./services/ExifService');
 
 // Import servizi
 const VisionService = require('./services/VisionService');
@@ -161,6 +162,30 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
     siteId = result.lastInsertRowid;
     logExtractionStep(siteId, 'upload', 'success', 'Immagine caricata con successo');
 
+    // STEP 0: Estrazione metadati GPS dalla foto
+    let gpsMetadata = null;
+    try {
+      logger.info(`📍 Estrazione metadati GPS dalla foto...`);
+      const exifService = new ExifService();
+      gpsMetadata = await exifService.extractMetadata(req.file.path);
+
+      if (gpsMetadata.has_metadata) {
+        logger.info(`✅ GPS trovato: ${gpsMetadata.gps?.coordinates_string || 'N/A'}`);
+        if (gpsMetadata.location) {
+          logger.info(`📍 Località: ${gpsMetadata.location.formatted_address}`);
+        }
+        logExtractionStep(siteId, 'gps_extraction', 'success',
+          'Metadati GPS estratti', gpsMetadata);
+      } else {
+        logger.warn(`⚠️ Nessun GPS nei metadati foto`);
+        logExtractionStep(siteId, 'gps_extraction', 'warning',
+          'Nessun GPS trovato');
+      }
+    } catch (gpsError) {
+      logger.warn(`⚠️ Errore estrazione GPS: ${gpsError.message}`);
+      logExtractionStep(siteId, 'gps_extraction', 'failed', gpsError.message);
+    }
+
     // STEP 1: Analisi immagine con Claude Vision API
     logger.info(`🔍 Inizio analisi AI per site ID ${siteId}...`);
     const visionStart = Date.now();
@@ -223,7 +248,36 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
       }
     }
 
-    // Salva dati finali (validati o estratti)
+    // STEP 3: Integra dati GPS se disponibili e mancanti
+    if (gpsMetadata?.has_metadata && gpsMetadata.location) {
+      const gpsLocation = gpsMetadata.location.address;
+
+      // Auto-completa città se manca
+      if (!finalData.city && gpsLocation.city) {
+        finalData.city = gpsLocation.city;
+        logger.info(`📍 Città auto-compilata da GPS: ${gpsLocation.city}`);
+      }
+
+      // Auto-completa provincia se manca
+      if (!finalData.province && gpsLocation.province) {
+        finalData.province = gpsLocation.province;
+        logger.info(`📍 Provincia auto-compilata da GPS: ${gpsLocation.province}`);
+      }
+
+      // Auto-completa indirizzo se manca
+      if (!finalData.address && gpsMetadata.location.formatted_address) {
+        finalData.address = gpsMetadata.location.formatted_address;
+        logger.info(`📍 Indirizzo auto-compilato da GPS: ${gpsMetadata.location.formatted_address}`);
+      }
+
+      // Auto-completa CAP se manca
+      if (!finalData.postal_code && gpsLocation.postcode) {
+        finalData.postal_code = gpsLocation.postcode;
+        logger.info(`📍 CAP auto-compilato da GPS: ${gpsLocation.postcode}`);
+      }
+    }
+
+    // Salva dati finali (validati o estratti + GPS)
     run(
       `UPDATE construction_sites SET
         raw_text = ?,
@@ -251,7 +305,15 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         company_employees = ?,
         company_sector = ?,
         company_certifications = ?,
-        social_media = ?
+        social_media = ?,
+        gps_latitude = ?,
+        gps_longitude = ?,
+        gps_altitude = ?,
+        gps_location_address = ?,
+        gps_location_city = ?,
+        gps_location_province = ?,
+        photo_datetime = ?,
+        photo_device = ?
       WHERE id = ?`,
       [
         finalData.raw_text || null,
@@ -280,6 +342,14 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         validationResult?.enriched_data?.sector || null,
         JSON.stringify(validationResult?.enriched_data?.certifications || []),
         JSON.stringify(validationResult?.enriched_data?.social_media || {}),
+        gpsMetadata?.gps?.latitude || null,
+        gpsMetadata?.gps?.longitude || null,
+        gpsMetadata?.gps?.altitude || null,
+        gpsMetadata?.location?.formatted_address || null,
+        gpsMetadata?.location?.address?.city || null,
+        gpsMetadata?.location?.address?.province || null,
+        gpsMetadata?.datetime?.iso || null,
+        gpsMetadata?.device?.full_name || null,
         siteId
       ]
     );
