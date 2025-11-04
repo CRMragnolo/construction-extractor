@@ -88,7 +88,6 @@ Rispondi SOLO con JSON, senza testo aggiuntivo.`;
           max_tokens: 2000,
           temperature: 0.2, // Bassa temperatura per risposte più deterministiche
           top_p: 0.9,
-          search_domain_filter: ['it'], // Limita ricerca a domini italiani
           return_images: false,
           return_related_questions: false
         },
