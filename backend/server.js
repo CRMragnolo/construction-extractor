@@ -1,4 +1,12 @@
 require('dotenv').config();
+
+// Esegui migrazioni database prima di tutto
+try {
+  require('./run-migrations');
+} catch (error) {
+  console.warn('⚠️ Migrazioni non eseguite (probabilmente già applicate):', error.message);
+}
+
 const express = require('express');
 const cors = require('cors');
 const Database = require('better-sqlite3');
