@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { CurrencyDollarIcon, ChartBarIcon, ClockIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
+
 export default function CostsPage() {
   const [loading, setLoading] = useState(true)
   const [costData, setCostData] = useState(null)
@@ -13,7 +15,7 @@ export default function CostsPage() {
   const fetchCosts = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:5002/api/costs')
+      const response = await fetch(`${API_BASE}/api/costs`)
       const data = await response.json()
 
       if (!data.success) {
