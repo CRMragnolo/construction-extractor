@@ -11,6 +11,8 @@ export default function ImageUploader({ onSuccess }) {
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  const [companyName, setCompanyName] = useState('')
+  const [location, setLocation] = useState('')
   const fileInputRef = useRef(null)
 
   const handleFileSelect = (e) => {
@@ -51,6 +53,14 @@ export default function ImageUploader({ onSuccess }) {
     const formData = new FormData()
     formData.append('image', file)
 
+    // Aggiungi dati opzionali se forniti
+    if (companyName.trim()) {
+      formData.append('company_name', companyName.trim())
+    }
+    if (location.trim()) {
+      formData.append('location', location.trim())
+    }
+
     try {
       const response = await axios.post(`${API_BASE}/api/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -81,6 +91,8 @@ export default function ImageUploader({ onSuccess }) {
     setProgress(0)
     setResult(null)
     setError(null)
+    setCompanyName('')
+    setLocation('')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -152,13 +164,51 @@ export default function ImageUploader({ onSuccess }) {
             </span>
           </div>
 
+          {/* Campi Opzionali */}
+          <div className="space-y-3 pt-2">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm font-medium text-blue-900 mb-2">
+                ⚡ Opzionale: Compila per velocizzare (salta OCR)
+              </p>
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-xs text-gray-700 mb-1">
+                    🏢 Nome Impresa/Ditta
+                  </label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="es: FARRONATO Costruzioni"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-700 mb-1">
+                    📍 Località Cantiere
+                  </label>
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="es: Romano d'Ezzelino"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 mt-2">
+                💡 Se compili entrambi i campi, l'OCR viene saltato risparmiando tempo e costi
+              </p>
+            </div>
+          </div>
+
           {!uploading && (
             <button
               onClick={handleUpload}
               className="w-full btn-primary py-4 text-lg font-semibold flex items-center justify-center gap-2"
             >
               <ArrowUpTrayIcon className="w-6 h-6" />
-              🚀 Analizza Cartello
+              {companyName && location ? '⚡ Cerca Azienda Online' : '🤖 Analizza Cartello'}
             </button>
           )}
         </div>

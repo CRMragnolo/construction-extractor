@@ -17,6 +17,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@google-cloud/vision": "^5.3.4",
     "axios": "^1.6.8",
     "better-sqlite3": "^12.4.1",
     "cors": "^2.8.5",

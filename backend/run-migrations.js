@@ -6,7 +6,8 @@ console.log('🔄 Esecuzione migrazioni database...');
 const migrationsDir = path.join(__dirname, 'migrations');
 const migrations = [
   'add-gps-columns.js',
-  'update-extraction-logs-steps.js'
+  'update-extraction-logs-steps.js',
+  'add-manual-input-step.js'
 ];
 
 try {

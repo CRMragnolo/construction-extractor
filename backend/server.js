@@ -18,7 +18,7 @@ const winston = require('winston');
 const ExifService = require('./services/ExifService');
 
 // Import servizi
-const VisionService = require('./services/VisionService');
+const GoogleVisionService = require('./services/GoogleVisionService');
 const PerplexityService = require('./services/PerplexityService');
 
 const app = express();
@@ -194,16 +194,55 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
       logExtractionStep(siteId, 'gps_extraction', 'failed', gpsError.message);
     }
 
-    // STEP 1: Analisi immagine con Claude Vision API
-    logger.info(`🔍 Inizio analisi AI per site ID ${siteId}...`);
-    const visionStart = Date.now();
+    // STEP 1: Estrazione dati (OCR o input manuale)
+    let extractedData;
+    let visionDuration = 0;
 
-    const visionService = new VisionService(process.env.ANTHROPIC_API_KEY);
-    const extractedData = await visionService.analyzeConstructionSite(req.file.path);
+    // Controlla se utente ha fornito dati manuali
+    const manualCompany = req.body.company_name;
+    const manualLocation = req.body.location;
 
-    const visionDuration = Date.now() - visionStart;
-    logExtractionStep(siteId, 'vision_analysis', 'success',
-      'Dati estratti da AI', extractedData, visionDuration);
+    if (manualCompany && manualLocation) {
+      // ✅ INPUT MANUALE - Skippa OCR!
+      logger.info(`✍️ Input manuale fornito: ${manualCompany} @ ${manualLocation}`);
+      logger.info(`⚡ SKIP OCR - Uso dati manuali`);
+
+      extractedData = {
+        raw_text: `[Dati inseriti manualmente]\nImpresa: ${manualCompany}\nLocalità: ${manualLocation}`,
+        company_name: manualCompany,
+        city: manualLocation,
+        legal_name: null,
+        vat_number: null,
+        tax_code: null,
+        phone_number: null,
+        mobile_number: null,
+        email: null,
+        website: null,
+        address: null,
+        province: null,
+        postal_code: null,
+        construction_type: null,
+        construction_description: null,
+        project_name: null,
+        project_amount: null,
+        confidence_score: 1.0 // Input manuale = 100% confidence
+      };
+
+      logExtractionStep(siteId, 'manual_input', 'success',
+        'Dati inseriti manualmente dall\'utente', extractedData);
+
+    } else {
+      // ❌ NO input manuale - Fa OCR con Google Vision
+      logger.info(`🔍 Inizio analisi AI per site ID ${siteId}...`);
+      const visionStart = Date.now();
+
+      const visionService = new GoogleVisionService(process.env.GOOGLE_API_KEY);
+      extractedData = await visionService.analyzeConstructionSite(req.file.path);
+
+      visionDuration = Date.now() - visionStart;
+      logExtractionStep(siteId, 'vision_analysis', 'success',
+        'Dati estratti da Google Vision + Gemini', extractedData, visionDuration);
+    }
 
     // STEP 2: Validazione e correzione con Perplexity
     let finalData = extractedData; // Default: usa dati estratti
@@ -220,25 +259,49 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         const perplexityDuration = Date.now() - perplexityStart;
 
         if (validationResult.company_found && validationResult.validated_data) {
-          // Usa dati validati invece di quelli raw
-          finalData = {
-            ...validationResult.validated_data,
-            raw_text: extractedData.raw_text, // Mantieni testo originale
-            construction_type: extractedData.construction_type,
-            construction_description: extractedData.construction_description,
-            project_name: extractedData.project_name,
-            project_amount: extractedData.project_amount,
-            confidence_score: validationResult.confidence_score
-          };
+          // VALIDAZIONE P.IVA - verifica coerenza
+          let vatValid = true;
+          const extractedVAT = extractedData.vat_number;
+          const validatedVAT = validationResult.validated_data.vat_number;
 
-          logger.info(`✅ Dati validati e corretti. Confidence: ${validationResult.confidence_score}`);
-          if (validationResult.corrections_made && validationResult.corrections_made.length > 0) {
-            logger.info(`📝 Correzioni applicate: ${validationResult.corrections_made.join(', ')}`);
+          // Se Claude ha estratto una P.IVA dall'immagine
+          if (extractedVAT && extractedVAT.length === 11) {
+            // E Perplexity ne ha trovata una DIVERSA
+            if (validatedVAT && validatedVAT !== extractedVAT) {
+              vatValid = false;
+              logger.error(`❌ P.IVA DIVERSA! Estratta: ${extractedVAT}, Validata: ${validatedVAT}`);
+              logger.error(`❌ OCR SBAGLIATO - Claude ha letto l'azienda errata!`);
+              logger.error(`❌ RIFIUTO validazione Perplexity, uso SOLO dati estratti dall'immagine`);
+            }
           }
 
-          logExtractionStep(siteId, 'perplexity_validation', 'success',
-            `Dati validati. Correzioni: ${validationResult.corrections_made?.length || 0}`,
-            validationResult, perplexityDuration);
+          if (vatValid) {
+            // Usa dati validati
+            finalData = {
+              ...validationResult.validated_data,
+              raw_text: extractedData.raw_text,
+              construction_type: extractedData.construction_type,
+              construction_description: extractedData.construction_description,
+              project_name: extractedData.project_name,
+              project_amount: extractedData.project_amount,
+              confidence_score: validationResult.confidence_score
+            };
+
+            logger.info(`✅ Dati validati e corretti. Confidence: ${validationResult.confidence_score}`);
+            if (validationResult.corrections_made && validationResult.corrections_made.length > 0) {
+              logger.info(`📝 Correzioni applicate: ${validationResult.corrections_made.join(', ')}`);
+            }
+
+            logExtractionStep(siteId, 'perplexity_validation', 'success',
+              `Dati validati. Correzioni: ${validationResult.corrections_made?.length || 0}`,
+              validationResult, perplexityDuration);
+          } else {
+            // P.IVA diversa - OCR sbagliato!
+            logger.warn(`❌ RIFIUTO validazione per P.IVA non corrispondente`);
+            logExtractionStep(siteId, 'perplexity_validation', 'warning',
+              `P.IVA non corrispondente: estratta ${extractedVAT}, validata ${validatedVAT}`,
+              null, perplexityDuration);
+          }
         } else {
           logger.warn(`⚠️ Azienda non trovata online, uso dati estratti dall'immagine`);
           logExtractionStep(siteId, 'perplexity_validation', 'warning',
