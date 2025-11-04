@@ -12,6 +12,145 @@ class PerplexityService {
   }
 
   /**
+   * Valida e corregge dati estratti dall'immagine confrontandoli con fonti online
+   * @param {Object} extractedData - Dati estratti da Claude Vision
+   * @returns {Promise<Object>} Dati validati e corretti
+   */
+  async validateAndCorrectData(extractedData) {
+    try {
+      const { company_name, vat_number, phone_number, city, address } = extractedData;
+
+      if (!company_name) {
+        throw new Error('Nome azienda mancante per validazione');
+      }
+
+      // Costruisci query di ricerca
+      let searchQuery = `"${company_name}"`;
+      if (vat_number) {
+        searchQuery += ` P.IVA ${vat_number}`;
+      }
+      if (city) {
+        searchQuery += ` ${city}`;
+      }
+      searchQuery += ' impresa costruzioni edilizia Italia';
+
+      const prompt = `Cerca e verifica i dati dell'azienda di costruzioni "${company_name}"${vat_number ? ` (P.IVA: ${vat_number})` : ''}${city ? ` a ${city}` : ''}.
+
+DATI ESTRATTI DA IMMAGINE (potrebbero contenere errori OCR):
+- Nome: ${company_name}
+- P.IVA: ${vat_number || 'non trovata'}
+- Telefono: ${phone_number || 'non trovato'}
+- Indirizzo: ${address || 'non trovato'}
+- Città: ${city || 'non trovata'}
+
+COMPITO:
+1. Cerca informazioni verificate online su questa azienda
+2. Confronta i dati estratti dall'immagine con quelli trovati online
+3. Correggi eventuali errori (es. P.IVA letta male, telefono sbagliato)
+4. Completa dati mancanti se disponibili online
+5. Aggiungi informazioni extra (descrizione, certificazioni, social)
+
+Rispondi in formato JSON:
+{
+  "company_found": true/false,
+  "validated_data": {
+    "company_name": "nome corretto (o quello estratto se corretto)",
+    "legal_name": "ragione sociale completa se diversa",
+    "vat_number": "P.IVA corretta (solo 11 numeri)",
+    "tax_code": "codice fiscale",
+    "phone_number": "telefono fisso corretto/completato",
+    "mobile_number": "cellulare se trovato",
+    "email": "email aziendale",
+    "website": "sito web",
+    "address": "indirizzo completo corretto",
+    "city": "città",
+    "province": "sigla provincia",
+    "postal_code": "CAP"
+  },
+  "enriched_data": {
+    "description": "descrizione attività",
+    "company_size": "micro|small|medium|large",
+    "founded_year": anno_numero,
+    "employees": numero_stimato,
+    "sector": "settore specifico",
+    "certifications": ["SOA", "ISO 9001", ...],
+    "social_media": {
+      "facebook": "url",
+      "linkedin": "url"
+    }
+  },
+  "corrections_made": [
+    "Elenco delle correzioni fatte, es: 'P.IVA corretta da 1234567890 a 12345678901'"
+  ],
+  "confidence_score": 0.95
+}
+
+Se non trovi l'azienda online: {"company_found": false, "validated_data": null}
+
+Rispondi SOLO con JSON, senza testo aggiuntivo.`;
+
+      // Chiamata API Perplexity
+      const response = await axios.post(
+        this.apiUrl,
+        {
+          model: this.model,
+          messages: [
+            {
+              role: 'system',
+              content: 'Sei un assistente specializzato nella verifica e validazione di dati aziendali italiani. Confronta i dati forniti con fonti online affidabili e correggi eventuali errori.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 3000,
+          temperature: 0.1, // Temperatura molto bassa per precisione
+          top_p: 0.9,
+          return_images: false,
+          return_related_questions: false
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      // Estrai risposta
+      const responseText = response.data.choices[0].message.content;
+
+      // Parse JSON
+      let validationResult;
+      try {
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          validationResult = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('Nessun JSON nella risposta');
+        }
+      } catch (parseError) {
+        console.error('Errore parsing Perplexity validation JSON:', responseText);
+        return {
+          company_found: false,
+          validated_data: extractedData, // Ritorna dati originali
+          error: 'Impossibile parsare risposta'
+        };
+      }
+
+      return validationResult;
+
+    } catch (error) {
+      if (error.response) {
+        console.error('Errore API Perplexity validation:', error.response.data);
+        throw new Error(`Perplexity API Error: ${error.response.data.error?.message || 'Unknown'}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Arricchisce dati aziendali con ricerca web
    * @param {Object} companyData - { company_name, vat_number, city }
    * @returns {Promise<Object>} Dati arricchiti

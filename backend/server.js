@@ -172,7 +172,58 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
     logExtractionStep(siteId, 'vision_analysis', 'success',
       'Dati estratti da AI', extractedData, visionDuration);
 
-    // Aggiorna database con dati estratti
+    // STEP 2: Validazione e correzione con Perplexity
+    let finalData = extractedData; // Default: usa dati estratti
+    let validationResult = null;
+
+    if (extractedData.company_name && process.env.PERPLEXITY_API_KEY) {
+      try {
+        logger.info(`🔍 Validazione e correzione dati con Perplexity per: ${extractedData.company_name}`);
+        const perplexityStart = Date.now();
+
+        const perplexityService = new PerplexityService(process.env.PERPLEXITY_API_KEY);
+        validationResult = await perplexityService.validateAndCorrectData(extractedData);
+
+        const perplexityDuration = Date.now() - perplexityStart;
+
+        if (validationResult.company_found && validationResult.validated_data) {
+          // Usa dati validati invece di quelli raw
+          finalData = {
+            ...validationResult.validated_data,
+            raw_text: extractedData.raw_text, // Mantieni testo originale
+            construction_type: extractedData.construction_type,
+            construction_description: extractedData.construction_description,
+            project_name: extractedData.project_name,
+            project_amount: extractedData.project_amount,
+            confidence_score: validationResult.confidence_score
+          };
+
+          logger.info(`✅ Dati validati e corretti. Confidence: ${validationResult.confidence_score}`);
+          if (validationResult.corrections_made && validationResult.corrections_made.length > 0) {
+            logger.info(`📝 Correzioni applicate: ${validationResult.corrections_made.join(', ')}`);
+          }
+
+          logExtractionStep(siteId, 'perplexity_validation', 'success',
+            `Dati validati. Correzioni: ${validationResult.corrections_made?.length || 0}`,
+            validationResult, perplexityDuration);
+        } else {
+          logger.warn(`⚠️ Azienda non trovata online, uso dati estratti dall'immagine`);
+          logExtractionStep(siteId, 'perplexity_validation', 'warning',
+            'Azienda non trovata online', null, perplexityDuration);
+        }
+
+      } catch (validationError) {
+        logger.error('⚠️ Errore validazione Perplexity:', {
+          message: validationError.message,
+          stack: validationError.stack,
+          response: validationError.response?.data
+        });
+        logExtractionStep(siteId, 'perplexity_validation', 'failed', validationError.message);
+        // Continua con dati estratti in caso di errore
+      }
+    }
+
+    // Salva dati finali (validati o estratti)
     run(
       `UPDATE construction_sites SET
         raw_text = ?,
@@ -192,84 +243,46 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         construction_description = ?,
         project_name = ?,
         project_amount = ?,
-        confidence_score = ?
+        confidence_score = ?,
+        perplexity_enriched = ?,
+        company_description = ?,
+        company_size = ?,
+        company_founded_year = ?,
+        company_employees = ?,
+        company_sector = ?,
+        company_certifications = ?,
+        social_media = ?
       WHERE id = ?`,
       [
-        extractedData.raw_text || null,
-        extractedData.company_name || null,
-        extractedData.legal_name || null,
-        extractedData.vat_number || null,
-        extractedData.tax_code || null,
-        extractedData.phone_number || null,
-        extractedData.mobile_number || null,
-        extractedData.email || null,
-        extractedData.website || null,
-        extractedData.address || null,
-        extractedData.city || null,
-        extractedData.province || null,
-        extractedData.postal_code || null,
-        extractedData.construction_type || null,
-        extractedData.construction_description || null,
-        extractedData.project_name || null,
-        extractedData.project_amount || null,
-        extractedData.confidence_score || null,
+        finalData.raw_text || null,
+        finalData.company_name || null,
+        finalData.legal_name || null,
+        finalData.vat_number || null,
+        finalData.tax_code || null,
+        finalData.phone_number || null,
+        finalData.mobile_number || null,
+        finalData.email || null,
+        finalData.website || null,
+        finalData.address || null,
+        finalData.city || null,
+        finalData.province || null,
+        finalData.postal_code || null,
+        finalData.construction_type || null,
+        finalData.construction_description || null,
+        finalData.project_name || null,
+        finalData.project_amount || null,
+        finalData.confidence_score || null,
+        validationResult?.company_found ? 1 : 0,
+        validationResult?.enriched_data?.description || null,
+        validationResult?.enriched_data?.company_size || null,
+        validationResult?.enriched_data?.founded_year || null,
+        validationResult?.enriched_data?.employees || null,
+        validationResult?.enriched_data?.sector || null,
+        JSON.stringify(validationResult?.enriched_data?.certifications || []),
+        JSON.stringify(validationResult?.enriched_data?.social_media || {}),
         siteId
       ]
     );
-
-    // STEP 2: Arricchimento con Perplexity (solo se abbiamo almeno il nome azienda)
-    let enrichedData = null;
-    if (extractedData.company_name && process.env.PERPLEXITY_API_KEY) {
-      try {
-        logger.info(`🌐 Arricchimento dati con Perplexity per: ${extractedData.company_name}`);
-        logger.info(`🔑 API Key Perplexity presente: ${process.env.PERPLEXITY_API_KEY ? 'SI' : 'NO'}`);
-        const perplexityStart = Date.now();
-
-        const perplexityService = new PerplexityService(process.env.PERPLEXITY_API_KEY);
-        enrichedData = await perplexityService.enrichCompanyData({
-          company_name: extractedData.company_name,
-          vat_number: extractedData.vat_number,
-          city: extractedData.city
-        });
-
-        const perplexityDuration = Date.now() - perplexityStart;
-        logExtractionStep(siteId, 'perplexity_enrichment', 'success',
-          'Dati arricchiti con successo', enrichedData, perplexityDuration);
-
-        // Aggiorna con dati arricchiti
-        run(
-          `UPDATE construction_sites SET
-            perplexity_enriched = 1,
-            company_description = ?,
-            company_size = ?,
-            company_founded_year = ?,
-            company_employees = ?,
-            company_sector = ?,
-            company_certifications = ?,
-            additional_contacts = ?,
-            social_media = ?
-          WHERE id = ?`,
-          [
-            enrichedData.description || null,
-            enrichedData.company_size || null,
-            enrichedData.founded_year || null,
-            enrichedData.employees || null,
-            enrichedData.sector || null,
-            JSON.stringify(enrichedData.certifications || []),
-            JSON.stringify(enrichedData.additional_contacts || []),
-            JSON.stringify(enrichedData.social_media || {}),
-            siteId
-          ]
-        );
-      } catch (enrichError) {
-        logger.error('⚠️ Errore arricchimento Perplexity:', {
-          message: enrichError.message,
-          stack: enrichError.stack,
-          response: enrichError.response?.data
-        });
-        logExtractionStep(siteId, 'perplexity_enrichment', 'failed', enrichError.message);
-      }
-    }
 
     // Finalizza
     const totalDuration = Date.now() - startTime;
@@ -289,10 +302,13 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
       success: true,
       site_id: siteId,
       processing_time: totalDuration,
-      data: {
-        ...extractedData,
-        enriched: enrichedData
+      data: finalData, // Dati validati
+      validation: {
+        was_validated: validationResult?.company_found || false,
+        corrections_made: validationResult?.corrections_made || [],
+        confidence_score: finalData.confidence_score
       },
+      enriched_data: validationResult?.enriched_data || null,
       database_record: sites[0]
     });
 
