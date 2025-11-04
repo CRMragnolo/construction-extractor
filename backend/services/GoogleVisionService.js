@@ -168,7 +168,7 @@ Rispondi SOLO con il JSON, senza markdown o altre spiegazioni.`;
           ],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 2048
+            maxOutputTokens: 8192
           }
         }
       );
