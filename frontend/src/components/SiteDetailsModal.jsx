@@ -107,6 +107,50 @@ export default function SiteDetailsModal({ site, onClose }) {
                 </div>
               )}
 
+              {/* Località Foto (GPS) */}
+              {(data.gps_location_city || data.gps_latitude) && (
+                <div className="card bg-blue-50 border-2 border-blue-200">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-4">📍 Località Foto (GPS)</h3>
+                  <div className="space-y-1">
+                    {data.gps_location_address && (
+                      <InfoRow label="Indirizzo GPS" value={data.gps_location_address} icon="🗺️" />
+                    )}
+                    {data.gps_location_city && (
+                      <InfoRow label="Città" value={data.gps_location_city} icon="🏙️" />
+                    )}
+                    {data.gps_location_province && (
+                      <InfoRow label="Provincia" value={data.gps_location_province} icon="📌" />
+                    )}
+                    {data.photo_datetime && (
+                      <InfoRow
+                        label="Data Scatto"
+                        value={new Date(data.photo_datetime).toLocaleString('it-IT')}
+                        icon="📅"
+                      />
+                    )}
+                    {data.photo_device && (
+                      <InfoRow label="Dispositivo" value={data.photo_device} icon="📱" />
+                    )}
+                    {data.gps_latitude && data.gps_longitude && (
+                      <div className="py-2 border-t border-blue-100 mt-2">
+                        <span className="text-sm text-gray-500">Coordinate</span>
+                        <p className="text-gray-900 font-mono text-sm">
+                          {data.gps_latitude.toFixed(6)}, {data.gps_longitude.toFixed(6)}
+                        </p>
+                        <a
+                          href={`https://www.google.com/maps?q=${data.gps_latitude},${data.gps_longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline text-sm mt-1 inline-block"
+                        >
+                          🗺️ Vedi su Google Maps
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Dettagli Cantiere */}
               {(data.construction_type || data.construction_description) && (
                 <div className="card">
