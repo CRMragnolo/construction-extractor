@@ -8,7 +8,7 @@ const axios = require('axios');
 class GoogleVisionService {
   constructor(googleApiKey) {
     this.googleApiKey = googleApiKey;
-    this.geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+    this.geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
     // Client Google Vision (usa API key invece di service account)
     this.visionClient = null; // Inizializzeremo con API key
