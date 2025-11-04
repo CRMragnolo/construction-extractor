@@ -91,17 +91,20 @@ CREATE TABLE IF NOT EXISTS extraction_logs (
 CREATE INDEX IF NOT EXISTS idx_logs_site ON extraction_logs(construction_site_id);
 CREATE INDEX IF NOT EXISTS idx_logs_step ON extraction_logs(step);
 
+-- DROP vecchia tabella api_usage se esiste (struttura obsoleta)
+DROP TABLE IF EXISTS api_usage;
+
 -- Tabella per tracking usage e costi API (NUOVA VERSIONE)
-CREATE TABLE IF NOT EXISTS api_usage (
+CREATE TABLE api_usage (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  construction_site_id INTEGER,
+  construction_site_id INTEGER, -- NULLABLE - può essere NULL se non ancora assegnato
   service TEXT NOT NULL CHECK(service IN ('google_vision', 'gemini', 'perplexity')),
   tokens_input INTEGER DEFAULT 0,
   tokens_output INTEGER DEFAULT 0,
   cost_usd REAL NOT NULL,
   request_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-  metadata TEXT, -- JSON con dettagli extra (model, response_id, etc)
-  FOREIGN KEY (construction_site_id) REFERENCES construction_sites(id) ON DELETE CASCADE
+  metadata TEXT -- JSON con dettagli extra (model, response_id, etc)
+  -- FOREIGN KEY RIMOSSO per evitare constraint failures durante inserimento
 );
 
 -- Index per query performance
@@ -109,8 +112,12 @@ CREATE INDEX IF NOT EXISTS idx_api_usage_site ON api_usage(construction_site_id)
 CREATE INDEX IF NOT EXISTS idx_api_usage_service ON api_usage(service);
 CREATE INDEX IF NOT EXISTS idx_api_usage_timestamp ON api_usage(request_timestamp);
 
+-- DROP vecchie views se esistono
+DROP VIEW IF EXISTS monthly_costs;
+DROP VIEW IF EXISTS site_costs;
+
 -- View per statistiche mensili
-CREATE VIEW IF NOT EXISTS monthly_costs AS
+CREATE VIEW monthly_costs AS
 SELECT
   strftime('%Y-%m', request_timestamp) as month,
   service,

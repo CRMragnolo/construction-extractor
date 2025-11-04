@@ -1,14 +1,16 @@
+-- DROP vecchia tabella se esiste
+DROP TABLE IF EXISTS api_usage;
+
 -- Tabella per tracking usage e costi API
-CREATE TABLE IF NOT EXISTS api_usage (
+CREATE TABLE api_usage (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  construction_site_id INTEGER,
+  construction_site_id INTEGER, -- NULLABLE
   service TEXT NOT NULL CHECK(service IN ('google_vision', 'gemini', 'perplexity')),
   tokens_input INTEGER DEFAULT 0,
   tokens_output INTEGER DEFAULT 0,
   cost_usd REAL NOT NULL,
   request_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-  metadata TEXT, -- JSON con dettagli extra (model, response_id, etc)
-  FOREIGN KEY (construction_site_id) REFERENCES construction_sites(id) ON DELETE CASCADE
+  metadata TEXT -- JSON con dettagli extra
 );
 
 -- Index per query performance
