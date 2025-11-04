@@ -220,67 +220,25 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         const perplexityDuration = Date.now() - perplexityStart;
 
         if (validationResult.company_found && validationResult.validated_data) {
-          // VALIDAZIONE GEOGRAFICA - controlla coerenza località
-          let geoConsistent = true;
-          const extractedCity = extractedData.city || gpsMetadata?.location?.address?.city;
-          const extractedProvince = extractedData.province || gpsMetadata?.location?.address?.province;
-          const validatedCity = validationResult.validated_data.city;
-          const validatedProvince = validationResult.validated_data.province;
+          // Usa dati validati invece di quelli raw
+          finalData = {
+            ...validationResult.validated_data,
+            raw_text: extractedData.raw_text, // Mantieni testo originale
+            construction_type: extractedData.construction_type,
+            construction_description: extractedData.construction_description,
+            project_name: extractedData.project_name,
+            project_amount: extractedData.project_amount,
+            confidence_score: validationResult.confidence_score
+          };
 
-          // Se abbiamo sia dati estratti che validati, controlliamo coerenza
-          if (extractedProvince && validatedProvince) {
-            // Normalizza province (es: "Vicenza" → "VI", "TREVISO" → "TV")
-            const normalizeProvince = (p) => {
-              if (!p) return null;
-              const provinceMap = {
-                'VICENZA': 'VI', 'VI': 'VI',
-                'TREVISO': 'TV', 'TV': 'TV',
-                'PADOVA': 'PD', 'PD': 'PD',
-                'VENEZIA': 'VE', 'VE': 'VE',
-                'VERONA': 'VR', 'VR': 'VR',
-                'TRENTO': 'TN', 'TN': 'TN',
-                'BOLZANO': 'BZ', 'BZ': 'BZ'
-              };
-              return provinceMap[p.toUpperCase()] || p.toUpperCase().substring(0, 2);
-            };
-
-            const extractedProv = normalizeProvince(extractedProvince);
-            const validatedProv = normalizeProvince(validatedProvince);
-
-            if (extractedProv !== validatedProv) {
-              geoConsistent = false;
-              logger.warn(`⚠️ INCOERENZA GEOGRAFICA! Estratto: ${extractedProvince}, Validato: ${validatedProvince}`);
-              logger.warn(`⚠️ Possibile errore OCR nel nome azienda. RIFIUTO validazione.`);
-            }
+          logger.info(`✅ Dati validati e corretti. Confidence: ${validationResult.confidence_score}`);
+          if (validationResult.corrections_made && validationResult.corrections_made.length > 0) {
+            logger.info(`📝 Correzioni applicate: ${validationResult.corrections_made.join(', ')}`);
           }
 
-          if (geoConsistent) {
-            // Usa dati validati invece di quelli raw
-            finalData = {
-              ...validationResult.validated_data,
-              raw_text: extractedData.raw_text, // Mantieni testo originale
-              construction_type: extractedData.construction_type,
-              construction_description: extractedData.construction_description,
-              project_name: extractedData.project_name,
-              project_amount: extractedData.project_amount,
-              confidence_score: validationResult.confidence_score
-            };
-
-            logger.info(`✅ Dati validati e corretti. Confidence: ${validationResult.confidence_score}`);
-            if (validationResult.corrections_made && validationResult.corrections_made.length > 0) {
-              logger.info(`📝 Correzioni applicate: ${validationResult.corrections_made.join(', ')}`);
-            }
-
-            logExtractionStep(siteId, 'perplexity_validation', 'success',
-              `Dati validati. Correzioni: ${validationResult.corrections_made?.length || 0}`,
-              validationResult, perplexityDuration);
-          } else {
-            // Incoerenza geografica - NON usare dati validati
-            logger.warn(`❌ RIFIUTO validazione per incoerenza geografica. Uso dati estratti dall'immagine.`);
-            logExtractionStep(siteId, 'perplexity_validation', 'warning',
-              `Incoerenza geografica: estratto ${extractedProvince}, validato ${validatedProvince}`,
-              null, perplexityDuration);
-          }
+          logExtractionStep(siteId, 'perplexity_validation', 'success',
+            `Dati validati. Correzioni: ${validationResult.corrections_made?.length || 0}`,
+            validationResult, perplexityDuration);
         } else {
           logger.warn(`⚠️ Azienda non trovata online, uso dati estratti dall'immagine`);
           logExtractionStep(siteId, 'perplexity_validation', 'warning',
