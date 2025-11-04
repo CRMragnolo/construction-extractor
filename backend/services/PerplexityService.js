@@ -1,14 +1,17 @@
 const axios = require('axios');
+const CostTracker = require('./CostTracker');
 
 /**
  * PerplexityService - Arricchimento dati aziendali con Perplexity API
  * Cerca informazioni aggiuntive su aziende di costruzione
  */
 class PerplexityService {
-  constructor(apiKey) {
+  constructor(apiKey, siteId = null) {
     this.apiKey = apiKey;
+    this.siteId = siteId;
     this.apiUrl = 'https://api.perplexity.ai/chat/completions';
     this.model = 'sonar-pro'; // Modello con ricerca web avanzata (2025)
+    this.costTracker = new CostTracker();
   }
 
   /**
@@ -129,6 +132,21 @@ Rispondi SOLO con JSON, senza testo aggiuntivo.`;
       // Estrai risposta
       const responseText = response.data.choices[0].message.content;
 
+      // Traccia costo Perplexity (validation)
+      if (this.siteId && response.data.usage) {
+        const usage = response.data.usage;
+        this.costTracker.trackPerplexity(
+          this.siteId,
+          usage.prompt_tokens || 0,
+          usage.completion_tokens || 0,
+          {
+            model: this.model,
+            total_tokens: usage.total_tokens,
+            operation: 'validation'
+          }
+        );
+      }
+
       // Parse JSON
       let validationResult;
       try {
@@ -248,6 +266,21 @@ Rispondi SOLO con JSON, senza testo aggiuntivo.`;
 
       // Estrai risposta
       const responseText = response.data.choices[0].message.content;
+
+      // Traccia costo Perplexity (enrichment)
+      if (this.siteId && response.data.usage) {
+        const usage = response.data.usage;
+        this.costTracker.trackPerplexity(
+          this.siteId,
+          usage.prompt_tokens || 0,
+          usage.completion_tokens || 0,
+          {
+            model: this.model,
+            total_tokens: usage.total_tokens,
+            operation: 'enrichment'
+          }
+        );
+      }
 
       // Parse JSON
       let enrichedData;
@@ -388,6 +421,22 @@ Se non trovi informazioni: {"found": false}`;
       );
 
       const responseText = response.data.choices[0].message.content;
+
+      // Traccia costo Perplexity (VAT lookup)
+      if (this.siteId && response.data.usage) {
+        const usage = response.data.usage;
+        this.costTracker.trackPerplexity(
+          this.siteId,
+          usage.prompt_tokens || 0,
+          usage.completion_tokens || 0,
+          {
+            model: this.model,
+            total_tokens: usage.total_tokens,
+            operation: 'vat_lookup'
+          }
+        );
+      }
+
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
 
       if (jsonMatch) {

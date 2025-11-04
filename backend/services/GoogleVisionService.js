@@ -1,14 +1,17 @@
 const vision = require('@google-cloud/vision');
 const axios = require('axios');
+const CostTracker = require('./CostTracker');
 
 /**
  * GoogleVisionService - OCR ad alta precisione con Google Cloud Vision
  * + interpretazione dati con Gemini Flash (economico e veloce)
  */
 class GoogleVisionService {
-  constructor(googleApiKey) {
+  constructor(googleApiKey, siteId = null) {
     this.googleApiKey = googleApiKey;
+    this.siteId = siteId;
     this.geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+    this.costTracker = new CostTracker();
 
     // Client Google Vision (usa API key invece di service account)
     this.visionClient = null; // Inizializzeremo con API key
@@ -88,6 +91,14 @@ class GoogleVisionService {
 
       // Il primo elemento contiene tutto il testo estratto
       const fullText = textAnnotations[0].description;
+
+      // Traccia costo Google Vision
+      if (this.siteId) {
+        this.costTracker.trackGoogleVision(this.siteId, {
+          text_length: fullText.length,
+          annotations_count: textAnnotations.length
+        });
+      }
 
       return fullText;
 
@@ -189,6 +200,21 @@ Rispondi SOLO con il JSON, senza markdown o altre spiegazioni.`;
       }
 
       const responseText = candidate.content.parts[0].text;
+
+      // Traccia costo Gemini
+      if (this.siteId && response.data.usageMetadata) {
+        const usage = response.data.usageMetadata;
+        this.costTracker.trackGemini(
+          this.siteId,
+          usage.promptTokenCount || 0,
+          usage.candidatesTokenCount || 0,
+          {
+            model: response.data.modelVersion,
+            response_id: response.data.responseId,
+            finish_reason: candidate.finishReason
+          }
+        );
+      }
 
       // Parse JSON dalla risposta
       let extractedData;

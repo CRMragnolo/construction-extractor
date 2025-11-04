@@ -4,6 +4,7 @@ import ImageUploader from './components/ImageUploader'
 import SitesList from './components/SitesList'
 import SiteDetailsModal from './components/SiteDetailsModal'
 import StatsCard from './components/StatsCard'
+import CostsPage from './pages/CostsPage'
 import { DocumentMagnifyingGlassIcon, BuildingOfficeIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
@@ -13,7 +14,7 @@ function App() {
   const [stats, setStats] = useState(null)
   const [selectedSite, setSelectedSite] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [currentView, setCurrentView] = useState('upload') // 'upload' | 'list'
+  const [currentView, setCurrentView] = useState('upload') // 'upload' | 'list' | 'costs'
 
   // Carica lista cantieri
   const loadSites = async () => {
@@ -102,15 +103,29 @@ function App() {
           >
             📋 Cantieri Estratti ({sites.length})
           </button>
+          <button
+            onClick={() => setCurrentView('costs')}
+            className={`px-6 py-3 rounded-t-lg font-medium transition-all ${
+              currentView === 'costs'
+                ? 'bg-white text-primary-600 shadow-md'
+                : 'bg-white/50 text-gray-600 hover:bg-white/70'
+            }`}
+          >
+            💰 Costi API
+          </button>
         </div>
       </div>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 pb-12 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-b-lg rounded-tr-lg shadow-lg p-8">
+        {/* Costs View - full width senza wrapper */}
+        {currentView === 'costs' ? (
+          <CostsPage />
+        ) : (
+          <div className="bg-white rounded-b-lg rounded-tr-lg shadow-lg p-8">
 
-          {/* Stats Cards */}
-          {stats && (
+            {/* Stats Cards */}
+            {stats && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
               <StatsCard
                 icon={<DocumentMagnifyingGlassIcon className="w-6 h-6" />}
@@ -187,7 +202,8 @@ function App() {
               />
             </div>
           )}
-        </div>
+          </div>
+        )}
       </main>
 
       {/* Modal Dettagli */}

@@ -236,7 +236,7 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
       logger.info(`🔍 Inizio analisi AI per site ID ${siteId}...`);
       const visionStart = Date.now();
 
-      const visionService = new GoogleVisionService(process.env.GOOGLE_API_KEY);
+      const visionService = new GoogleVisionService(process.env.GOOGLE_API_KEY, siteId);
       extractedData = await visionService.analyzeConstructionSite(req.file.path);
 
       visionDuration = Date.now() - visionStart;
@@ -253,7 +253,7 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         logger.info(`🔍 Validazione e correzione dati con Perplexity per: ${extractedData.company_name}`);
         const perplexityStart = Date.now();
 
-        const perplexityService = new PerplexityService(process.env.PERPLEXITY_API_KEY);
+        const perplexityService = new PerplexityService(process.env.PERPLEXITY_API_KEY, siteId);
         validationResult = await perplexityService.validateAndCorrectData(extractedData);
 
         const perplexityDuration = Date.now() - perplexityStart;
@@ -610,6 +610,80 @@ app.get('/api/search', async (req, res) => {
     });
   } catch (error) {
     logger.error('Errore ricerca:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ========= COSTS & USAGE STATS =========
+const CostTracker = require('./services/CostTracker');
+
+// GET /api/costs - Statistiche costi
+app.get('/api/costs', (req, res) => {
+  try {
+    const costTracker = new CostTracker();
+
+    // Costi mese corrente
+    const currentMonth = costTracker.getCurrentMonthTotal();
+    const breakdown = costTracker.getCurrentMonthBreakdown();
+    const recentUsage = costTracker.getRecentUsage(20);
+
+    // Calcola crediti Perplexity rimanenti ($5/mese gratis con Pro)
+    const perplexitySpent = breakdown.find(b => b.service === 'perplexity')?.total_cost_usd || 0;
+    const perplexityCreditsRemaining = Math.max(0, 5 - perplexitySpent);
+
+    costTracker.close();
+
+    res.json({
+      success: true,
+      current_month: {
+        total_cost_usd: currentMonth.total_cost || 0,
+        total_requests: currentMonth.total_requests || 0,
+        breakdown: breakdown.map(b => ({
+          service: b.service,
+          request_count: b.request_count,
+          total_cost_usd: b.total_cost_usd,
+          tokens_input: b.total_tokens_input,
+          tokens_output: b.total_tokens_output
+        })),
+        perplexity_free_credits_remaining: perplexityCreditsRemaining
+      },
+      recent_usage: recentUsage.map(u => ({
+        service: u.service,
+        cost_usd: u.cost_usd,
+        company_name: u.company_name,
+        timestamp: u.request_timestamp,
+        tokens_input: u.tokens_input,
+        tokens_output: u.tokens_output
+      }))
+    });
+  } catch (error) {
+    logger.error('Errore ottenimento costi:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/costs/site/:id - Costo per singolo cantiere
+app.get('/api/costs/site/:id', (req, res) => {
+  try {
+    const costTracker = new CostTracker();
+    const siteCost = costTracker.getSiteCost(req.params.id);
+    costTracker.close();
+
+    if (!siteCost) {
+      return res.json({
+        success: true,
+        site_id: req.params.id,
+        total_cost_usd: 0,
+        total_requests: 0
+      });
+    }
+
+    res.json({
+      success: true,
+      ...siteCost
+    });
+  } catch (error) {
+    logger.error('Errore ottenimento costo cantiere:', error);
     res.status(500).json({ error: error.message });
   }
 });
