@@ -97,9 +97,9 @@ export default function SiteDetailsModal({ site, onClose }) {
               {/* Indirizzo */}
               {(data.address || data.city) && (
                 <div className="card">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">📍 Indirizzo</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">🏢 Sede Impresa Costruttrice</h3>
                   <div className="space-y-1">
-                    <InfoRow label="Indirizzo Completo" value={data.address} />
+                    <InfoRow label="Indirizzo" value={data.address} />
                     <InfoRow label="Città" value={data.city} />
                     <InfoRow label="Provincia" value={data.province} />
                     <InfoRow label="CAP" value={data.postal_code} />

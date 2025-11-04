@@ -47,16 +47,18 @@ export default function SitesList({ sites, onSelect, onDelete }) {
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 truncate">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 break-words">
                     {site.company_name || 'Azienda non identificata'}
                   </h3>
                   {site.legal_name && site.legal_name !== site.company_name && (
-                    <p className="text-sm text-gray-600">{site.legal_name}</p>
+                    <p className="text-sm text-gray-600 break-words">{site.legal_name}</p>
                   )}
                 </div>
-                {getStatusBadge(site.extraction_status)}
+                <div className="flex-shrink-0">
+                  {getStatusBadge(site.extraction_status)}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-700">
