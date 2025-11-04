@@ -87,7 +87,24 @@ IMPORTANTE:
 - Per vat_number estrai SOLO i numeri (rimuovi "IT" e spazi)
 - Per confidence_score metti un valore 0-1 basato sulla leggibilità (0.95 = ottimo, 0.5 = scarso)
 - Estrai anche numeri di telefono parzialmente visibili
-- Se vedi più aziende (es: committente + ditta), estrai la DITTA ESECUTRICE come company_name
+
+**IDENTIFICAZIONE IMPRESA COSTRUTTRICE (FONDAMENTALE):**
+Nel cartello ci possono essere più aziende. Cerca SOLO l'azienda con queste etichette:
+- "IMPRESA COSTRUTTRICE"
+- "IMPRESA ESECUTRICE"
+- "DITTA ESECUTRICE"
+- "IMPRESA APPALTATRICE"
+- "ESECUTORE DEI LAVORI"
+- "IMPRESA AFFIDATARIA"
+
+**IGNORA** queste aziende (non estrarle come company_name):
+- "COMMITTENTE" → chi paga, non chi lavora
+- "DIRETTORE LAVORI" → professionista, non impresa
+- "RESPONSABILE SICUREZZA" / "COORDINATORE SICUREZZA" → professionista
+- "PROGETTISTA" → professionista
+- Subappaltatori secondari
+
+Estrai come company_name SOLO l'azienda con l'etichetta "IMPRESA COSTRUTTRICE/ESECUTRICE" e i relativi dati (P.IVA, telefono, ecc).
 
 Rispondi SOLO con il JSON, senza altre spiegazioni.`;
 
