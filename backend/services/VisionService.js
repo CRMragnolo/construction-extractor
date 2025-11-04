@@ -104,6 +104,13 @@ Nel cartello ci possono essere più aziende. Cerca SOLO l'azienda con queste eti
 - "PROGETTISTA" → professionista
 - Subappaltatori secondari
 
+**ESTRAZIONE NOME AZIENDA - MASSIMA ATTENZIONE:**
+1. Leggi LENTAMENTE e CON CURA il nome che segue l'etichetta "IMPRESA ESECUTRICE:"
+2. Se il testo è poco leggibile, abbassa il confidence_score (es: 0.6)
+3. Estrai il nome ESATTAMENTE come scritto, lettera per lettera
+4. NON inventare nomi - se non riesci a leggere chiaramente, metti confidence_score basso
+5. Verifica che il nome estratto abbia senso (non parole random)
+
 Estrai come company_name SOLO l'azienda con l'etichetta "IMPRESA COSTRUTTRICE/ESECUTRICE" e i relativi dati (P.IVA, telefono, ecc).
 
 Rispondi SOLO con il JSON, senza altre spiegazioni.`;
