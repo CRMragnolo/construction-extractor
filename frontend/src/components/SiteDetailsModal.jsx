@@ -112,14 +112,8 @@ export default function SiteDetailsModal({ site, onClose }) {
                 <div className="card bg-blue-50 border-2 border-blue-200">
                   <h3 className="text-lg font-semibold text-blue-900 mb-4">📍 Località Foto (GPS)</h3>
                   <div className="space-y-1">
-                    {data.gps_location_address && (
-                      <InfoRow label="Indirizzo GPS" value={data.gps_location_address} icon="🗺️" />
-                    )}
                     {data.gps_location_city && (
-                      <InfoRow label="Città" value={data.gps_location_city} icon="🏙️" />
-                    )}
-                    {data.gps_location_province && (
-                      <InfoRow label="Provincia" value={data.gps_location_province} icon="📌" />
+                      <InfoRow label="Paese/Città" value={data.gps_location_city} icon="🏙️" />
                     )}
                     {data.photo_datetime && (
                       <InfoRow

@@ -44,11 +44,19 @@ DATI ESTRATTI DA IMMAGINE (potrebbero contenere errori OCR):
 - Città: ${city || 'non trovata'}
 
 COMPITO:
-1. Cerca informazioni verificate online su questa azienda
+1. Cerca informazioni verificate online su questa azienda (Camera di Commercio, PagineGialle, sito aziendale, registro imprese)
 2. Confronta i dati estratti dall'immagine con quelli trovati online
 3. Correggi eventuali errori (es. P.IVA letta male, telefono sbagliato)
-4. Completa dati mancanti se disponibili online
-5. Aggiungi informazioni extra (descrizione, certificazioni, social)
+4. **IMPORTANTE: Cerca ATTIVAMENTE telefono, email e sito web** - anche se non presenti nell'immagine
+5. Completa tutti i dati mancanti se disponibili online
+6. Aggiungi informazioni extra (descrizione, certificazioni, social)
+
+PRIORITÀ: Telefono, Email e Sito Web sono FONDAMENTALI - cerca su:
+- Sito web aziendale ufficiale
+- PagineGianche.it / PagineBianche.it
+- Google My Business
+- Registro Imprese
+- LinkedIn azienda
 
 Rispondi in formato JSON:
 {
