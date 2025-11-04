@@ -178,11 +178,17 @@ Rispondi SOLO con il JSON, senza markdown o altre spiegazioni.`;
 
       // Validazione struttura risposta
       if (!response.data || !response.data.candidates || response.data.candidates.length === 0) {
-        console.error('❌ Risposta Gemini non valida:', response.data);
+        console.error('❌ Risposta Gemini non valida (no candidates):', response.data);
         throw new Error('Gemini API ha restituito una risposta vuota o malformata');
       }
 
-      const responseText = response.data.candidates[0].content.parts[0].text;
+      const candidate = response.data.candidates[0];
+      if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+        console.error('❌ Risposta Gemini non valida (no content.parts):', candidate);
+        throw new Error('Gemini API: struttura risposta non valida (manca content.parts)');
+      }
+
+      const responseText = candidate.content.parts[0].text;
 
       // Parse JSON dalla risposta
       let extractedData;
