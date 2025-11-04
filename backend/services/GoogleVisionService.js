@@ -173,6 +173,15 @@ Rispondi SOLO con il JSON, senza markdown o altre spiegazioni.`;
         }
       );
 
+      // Debug: Log risposta completa
+      console.log('🔍 Gemini Response:', JSON.stringify(response.data, null, 2));
+
+      // Validazione struttura risposta
+      if (!response.data || !response.data.candidates || response.data.candidates.length === 0) {
+        console.error('❌ Risposta Gemini non valida:', response.data);
+        throw new Error('Gemini API ha restituito una risposta vuota o malformata');
+      }
+
       const responseText = response.data.candidates[0].content.parts[0].text;
 
       // Parse JSON dalla risposta
